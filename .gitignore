@@ -1,0 +1,20 @@
+# Environment files
+venv
+.env
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# IDE and text editor folders
+.idea/
+.vscode/
+*.sublime-workspace
+
+# Other files that you might not want to include in git
+*.log
+*.sqlite
+/root/backup/dbup3321.session
