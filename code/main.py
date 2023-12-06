@@ -27,11 +27,12 @@ class Main:
 
         # Timer
         self.update_event = pygame.event.custom_type()
-        pygame.time.set_timer(self.update_event, 200)
+        pygame.time.set_timer(self.update_event, 1000 // SNAKE_SPEED)
         self.game_active = False
         self.snake_died = False
 
         # Audio
+        self.is_sound_muted = False
         self.crunch_sound = pygame.mixer.Sound(join('..', 'audio', 'crunch.wav'))
         self.bg_music = pygame.mixer.Sound(join('..', 'audio', 'arcade.ogg'))
         self.bg_music.set_volume(0.5)
@@ -41,6 +42,14 @@ class Main:
         self.eaten_apples = 0
         self.score = 0
         self.start_time = pygame.time.get_ticks()
+        self.mute_button_rect = None
+
+    def toggle_sound(self):
+        self.is_sound_muted = not self.is_sound_muted
+        if self.is_sound_muted:
+            pygame.mixer.pause()
+        else:
+            pygame.mixer.unpause()
 
     def draw_bg(self):
         self.display_surface.fill(LIGHT_GREEN)
@@ -48,11 +57,13 @@ class Main:
             pygame.draw.rect(self.display_surface, DARK_GREEN, rect)
 
     def draw_status_bar(self):
-        label_font = pygame.font.Font(None, 30)
-        value_font = pygame.font.Font(None, 24)
+        label_font = pygame.font.Font(None, 28)
+        value_font = pygame.font.Font(None, 25)
 
         status_bar_surface = pygame.Surface((WINDOW_WIDTH, STATUS_BAR_HEIGHT), pygame.SRCALPHA)
-        status_bar_surface.fill((0, 0, 0, 128))
+        status_bar_surface.fill((0, 0, 0, 180))
+
+        self.mute_button_rect = self.draw_3d_button('Mute' if not self.is_sound_muted else 'Unmute', (WINDOW_WIDTH - 50, 22), (128, 128, 128), font_size=20, depth=3)
 
         elapsed_time = (pygame.time.get_ticks() - self.start_time) / 1000
         hours = int(elapsed_time // 3600)
@@ -65,12 +76,13 @@ class Main:
 
         status_bar_surface.blit(label_font.render('Time: ', True, (255, 255, 255)), (10, 15))
         status_bar_surface.blit(value_font.render(timer_text, True, (255, 255, 255)), (70, 18))
-        status_bar_surface.blit(label_font.render('Apples: ', True, (255, 255, 255)), (160, 15))
-        status_bar_surface.blit(value_font.render(apples_text, True, (255, 255, 255)), (250, 18))
-        status_bar_surface.blit(label_font.render('Score: ', True, (255, 255, 255)), (290, 15))
-        status_bar_surface.blit(value_font.render(score_text, True, (255, 255, 255)), (360, 18))
+        status_bar_surface.blit(label_font.render('Apples: ', True, (255, 255, 255)), (175, 15))
+        status_bar_surface.blit(value_font.render(apples_text, True, (255, 255, 255)), (260, 18))
+        status_bar_surface.blit(label_font.render('Score: ', True, (255, 255, 255)), (315, 15))
+        status_bar_surface.blit(value_font.render(score_text, True, (255, 255, 255)), (385, 18))
+        status_bar_surface.blit(label_font.render('Speed: ', True, (255, 255, 255)), (440, 15))
+        status_bar_surface.blit(value_font.render(str(SNAKE_SPEED), True, (255, 255, 255)), (515, 18))
 
-        # Blit the status bar surface to the main display surface at the top
         self.display_surface.blit(status_bar_surface, (0, 0))
 
     def draw_3d_button(self, text, center_pos, bg_color, text_color=(255, 255, 255), font_size=40, depth=5):
@@ -183,15 +195,22 @@ class Main:
         if keys[pygame.K_DOWN]:
             self.snake.direction = pygame.Vector2(0, 1) if self.snake.direction.y != -1 else self.snake.direction
 
+        if keys[pygame.K_m]:
+            self.toggle_sound()
+
     def collision(self):
         # Apple
         if self.snake.body[0] == self.apple.pos:
             # print('Matched')
+            if self.apple.is_special:
+                self.score += SPECIAL_APPLE_SCORE
+            else:
+                self.score += NORMAL_APPLE_SCORE
+
             self.snake.has_eaten = True
             self.apple.set_pos()
             self.crunch_sound.play()
             self.eaten_apples += 1
-            self.score = self.calculate_score()
 
         # Game over
         if self.snake.body[0] in self.snake.body[1:] or \
@@ -201,9 +220,6 @@ class Main:
             self.snake.reset()
             self.game_active = False
             self.snake_died = True
-
-    def calculate_score(self):
-        return self.eaten_apples * 5
 
     def run(self):
         while True:
@@ -218,6 +234,11 @@ class Main:
                 if event.type == pygame.KEYDOWN and not self.game_active and not self.snake_died:
                     self.game_active = True
 
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouse_pos = pygame.mouse.get_pos()
+                    if self.mute_button_rect.collidepoint(mouse_pos):
+                        self.toggle_sound()
+
             # Updates
             self.input()
             self.collision()
@@ -227,14 +248,15 @@ class Main:
                 self.show_game_over_screen()
                 self.snake_died = False  # Reset the flag
 
+            if self.game_active:
+                self.apple.update()
+
             # Drawing
             self.draw_bg()
             self.draw_shadow()
             self.snake.draw()
             self.apple.draw()
             self.draw_status_bar()
-            # if self.apple.check_last_pos():
-            #     pass
 
             pygame.display.update()
 

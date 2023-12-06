@@ -2,6 +2,13 @@ import pygame
 from sys import exit
 from os.path import join
 
+
+SNAKE_SPEED = 5
+NORMAL_APPLE_SCORE = 5
+SPECIAL_APPLE_SCORE = 10
+LIFETIME_NORMAL = 10
+LIFETIME_SPECIAL = 5
+
 ROWS = 10
 COLS = 16
 CELL_SIZE = 80
